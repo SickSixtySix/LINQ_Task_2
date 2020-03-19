@@ -7,11 +7,14 @@ namespace ConsoleApp3
     static class Program
     {
         // Полезные методы расширения
+        public static string Process(this string number, bool pre = false) =>
+            number.Replace(pre ? "-" : ":", pre ? ":" : "-");
+
         public static decimal Decimate(this string number) =>
-            decimal.Parse(number, new NumberFormatInfo() { NumberDecimalSeparator = "." });
+            decimal.Parse(number.Process(), new NumberFormatInfo() { NumberDecimalSeparator = "." });
 
         public static string Stringify(this decimal number) =>
-            number.ToString("G29", new NumberFormatInfo() { NumberDecimalSeparator = "." });
+            number.ToString("G29", new NumberFormatInfo() { NumberDecimalSeparator = "." }).Process(false);
 
         // Делегат разбора выражения
         private static readonly Func<string, string[], string> parse = (expression, priority) =>
@@ -30,7 +33,7 @@ namespace ConsoleApp3
                 .Aggregate(string.Empty, (x, y) =>
                 {
                     // Считывание текущего операнда
-                    if (char.IsDigit(y[0]) || y == ".")
+                    if (char.IsDigit(y[0]) || y == "." || y == ":")
                         operands[operand] += y;
                     else if (y == "*" || y == "/" || y == "+" || y == "-" || y == ")")
                     {
@@ -87,9 +90,9 @@ namespace ConsoleApp3
                 var expectation = Console.ReadLine();
                 var expressions = Console.ReadLine()
                     .Split(' ', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(x => parse(x, new string[] { "*", "/" }))   // Высоко-приоритетные операции
-                    .Select(x => parse(x, new string[] { "+", "-" }))   // Низко-приоритетные операции
-                    .Select(x => x.Trim('(', ')').Decimate().Stringify())
+                    .Select(x => parse(x, new string[] { "*", "/" }))       // Высокоприоритетные операции
+                    .Select(x => parse(x, new string[] { "+", "-" }))       // Низкоприоритетные операции
+                    .Select(x => x.Trim('(', ')').Decimate().Stringify())   // Извлечение результата
                     .ToArray();
 
                 // Вывод результатов
