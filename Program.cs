@@ -1,10 +1,18 @@
 using System;
+using System.Globalization;
 using System.Linq;
 
 namespace ConsoleApp3
 {
-    class Program
+    static class Program
     {
+        // Полезные методы расширения
+        public static decimal Decimate(this string number) =>
+            decimal.Parse(number, new NumberFormatInfo() { NumberDecimalSeparator = "." });
+
+        public static string Stringify(this decimal number) =>
+            number.ToString("G29", new NumberFormatInfo() { NumberDecimalSeparator = "." });
+
         // Делегат разбора выражения
         private static readonly Func<string, string[], string> parse = (expression, priority) =>
         {
@@ -22,7 +30,7 @@ namespace ConsoleApp3
                 .Aggregate(string.Empty, (x, y) =>
                 {
                     // Считывание текущего операнда
-                    if (char.IsDigit(y[0]))
+                    if (char.IsDigit(y[0]) || y == ".")
                         operands[operand] += y;
                     else if (y == "*" || y == "/" || y == "+" || y == "-" || y == ")")
                     {
@@ -30,8 +38,8 @@ namespace ConsoleApp3
                         if (operation != null)
                         {
                             // Вычисление результата операции
-                            var operand1 = Convert.ToInt32(operands[0]);
-                            var operand2 = Convert.ToInt32(operands[1]);
+                            var operand1 = operands[0].Decimate();
+                            var operand2 = operands[1].Decimate();
                             var result = operand1;
                             switch (operation)
                             {
@@ -40,12 +48,13 @@ namespace ConsoleApp3
                                 case "+": result += operand2; break;
                                 case "-": result -= operand2; break;
                             }
+                            var substitution = result.Stringify();
 
                             // Обновление обработанного выражения
-                            x = x.Replace($"{operand1}{operation}{operand2}", result.ToString());
+                            x = x.Replace($"{operands[0]}{operation}{operands[1]}", substitution);
 
                             // Обновление операндов (результат вычисления данной операции стал операндом для другой операции)
-                            operands[0] = result.ToString();
+                            operands[0] = substitution;
                             operands[1] = string.Empty;
                             operand = 0;
 
@@ -80,13 +89,14 @@ namespace ConsoleApp3
                     .Split(' ', StringSplitOptions.RemoveEmptyEntries)
                     .Select(x => parse(x, new string[] { "*", "/" }))   // Высоко-приоритетные операции
                     .Select(x => parse(x, new string[] { "+", "-" }))   // Низко-приоритетные операции
+                    .Select(x => x.Trim('(', ')').Decimate().Stringify())
                     .ToArray();
 
                 // Вывод результатов
                 for (int i = 0; i <= expressions.Length; i++)
                     if (i == expressions.Length)
                         Console.WriteLine("none");
-                    else if ($"({expectation})" == expressions[i])
+                    else if (expectation == expressions[i])
                     {
                         Console.WriteLine($"index {i}");
                         break;
